@@ -4,6 +4,15 @@ import numpy as np
 class NCPath:
 
 	def __init__( self ):
+		self.extents	= { "xMin":0.0,
+							"xMax":0.0,
+							"yMin":0.0,
+							"yMax":0.0,
+							"zMin":0.0,
+							"zMax":0.0,
+							"xWidth":0.0,
+							"yWidth":0.0,
+							"zWidth":0.0 }
 		self.filename	= ""
 		self.paths		= []		# Paths read from nc file
 
@@ -20,6 +29,7 @@ class NCPath:
 				# Initialize
 				if (len(x0)>1) or (len(y0)>1) or (len(z0)>1):
 					s0 = [ 0.0, 0.0, 0.0 ]
+					i = len(self.paths)
 
 					if len( line.split("X") ) > 1: t0 += 0b001
 					if len( line.split("Y") ) > 1: t0 += 0b010
@@ -37,6 +47,8 @@ class NCPath:
 								s0[1] = float( t1[0] )
 								s0[2] = float( t1[-1] )
 							else:
+								print i
+								if i > 0: s0[2] = self.paths[-1][2]
 								s0[1] = float( y0[-1] )
 
 						# Check for Z value
@@ -44,20 +56,44 @@ class NCPath:
 							s0[0] = float( x0[-1].split("Z")[0] )
 							s0[2] = float( z0[-1] )
 
-						else: s0[0] = float(x0[-1])
+							if i > 0: s0[1] = self.paths[-1][1]
+
+						else:
+							s0[0] = float(x0[-1])
+							if i > 0:
+								s0[1] = self.paths[-1][1]
+								s0[2] = self.paths[-1][2]
 
 					elif t0 & 0b010:
 						# Check for Z Value
 						if ( t0 & 0b100 ):
 							s0[1] = float( y0[-1].split("Z")[0] )
 							s0[2] = float( z0[-1] )
+							if i > 0: s0[0] = self.paths[-1][0]
 						else:
 							s0[1] = float( y0[-1] )
+							if i > 0:
+								s0[0] = self.paths[-1][0]
+								s0[2] = self.paths[-1][2]
 
 					else:
 						s0[2] = float( z0[-1].split("F")[0] )
+						if i > 0:
+							s0[0] = self.paths[-1][0]
+							s0[1] = self.paths[-1][1]
 			
 					self.paths.append(s0)
+
+					if s0[0] < self.extents["xMin"]: self.extents["xMin"] = s0[0]
+					if s0[0] > self.extents["xMax"]: self.extents["xMax"] = s0[0]
+					if s0[1] < self.extents["yMin"]: self.extents["yMin"] = s0[1]
+					if s0[1] > self.extents["yMax"]: self.extents["yMax"] = s0[1]
+					if s0[2] < self.extents["zMin"]: self.extents["zMin"] = s0[2]
+					if s0[2] > self.extents["zMax"]: self.extents["zMax"] = s0[2]
+
+		self.extents["xWidth"] = self.extents["xMax"] - self.extents["xMin"]
+		self.extents["yWidth"] = self.extents["yMax"] - self.extents["yMin"]
+		self.extents["zWidth"] = self.extents["zMax"] - self.extents["zMin"]
 
 		return 0
 
