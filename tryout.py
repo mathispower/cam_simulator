@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import	ncFile
 import	numpy as np
 import	pyglet
 from	pyglet.gl		import *
@@ -128,7 +127,7 @@ def on_draw():
 
 	Model_GroundPlane()
 
-	myH.Model_NC(ncModel, [mPosX,mPosY,mPosZ], [angle,mRotX,mRotY,mRotZ])
+	ncModel.DrawModel( [mPosX,mPosY,mPosZ], [angle,mRotX,mRotY,mRotZ] )
 
 	# label = pyglet.text.Label( label_1,
 	# 						   font_size=112,
@@ -223,7 +222,7 @@ def on_resize(width, height):
 	return pyglet.event.EVENT_HANDLED
 
 if __name__ == "__main__":
-	ncModel = myH.Init_NC(DIR, FILE)
+	ncModel = myH.ncModel(DIR+FILE)
 
 	setup()
 	# tBatch = pyglet.graphics.Batch()

@@ -1,1 +1,1 @@
-from camHelpers_NCFile			import Init_NC, Model_NC
+from camHelpers_NCFile			import ncModel

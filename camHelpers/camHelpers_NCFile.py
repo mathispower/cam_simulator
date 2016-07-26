@@ -2,40 +2,9 @@
 import	numpy	  as	 np
 from	pyglet.gl import *
 
-def Init_NC(DIR, FILE):
-	ncModel = NCPath()
-	ncModel.LoadFile(DIR+FILE)
-	return ncModel
+class ncModel:
 
-def Model_NC(ncModel, posM, rotM):
-	""" This function loads the model for rendering.
-		posM = [ position_X, position_Y, position_Z ]
-		rotM = [ angle, axis_X_on/off, axis_Y_on/off, axisZ_on/off ]
-	"""
-
-	glPushMatrix()
-
-	glTranslatef( posM[0], posM[1], posM[2] )
-	glRotatef( rotM[0], rotM[1], rotM[2], rotM[3] )
-
-	glColor3f( 0.0, 0.0, 1.0 )
-
-	glBegin(GL_LINES)
-
-	# Screen-Z is into the monitor but model-z is vertical
-	for path in ncModel.paths:
-		x = path[0]
-		y = path[2]
-		z = path[1]
-		glVertex3f( x, y, z )
-
-	glEnd()
-
-	glPopMatrix()
-
-class NCPath:
-
-	def __init__( self ):
+	def __init__( self, path ):
 		self.extents	= { "xMin":0.0,
 							"xMax":0.0,
 							"yMin":0.0,
@@ -45,8 +14,35 @@ class NCPath:
 							"xWidth":0.0,
 							"yWidth":0.0,
 							"zWidth":0.0 }
-		self.filename	= ""
+		self.filename	= path.split("/")[-1].split(".")[0]
 		self.paths		= []		# Paths read from nc file
+		self.LoadFile(path)
+
+	def DrawModel(self, posM, rotM):
+		""" This function loads the model for rendering.
+			posM = [ position_X, position_Y, position_Z ]
+			rotM = [ angle, axis_X_on/off, axis_Y_on/off, axisZ_on/off ]
+		"""
+
+		glPushMatrix()
+
+		glTranslatef( posM[0], posM[1], posM[2] )
+		glRotatef( rotM[0], rotM[1], rotM[2], rotM[3] )
+
+		glColor3f( 0.0, 0.0, 1.0 )
+
+		glBegin(GL_LINES)
+
+		# Screen-Z is into the monitor but model-z is vertical
+		for path in self.paths:
+			x = path[0]
+			y = path[2]
+			z = path[1]
+			glVertex3f( x, y, z )
+
+		glEnd()
+
+		glPopMatrix()
 
 	def GetPaths( self, lines ):
 		ind = 0
@@ -129,9 +125,9 @@ class NCPath:
 
 		return 0
 
-
 	def LoadFile( self, path ):
-		file = open( path, 'rb' )
+		self.path = path
+		file = open( self.path, 'rb' )
 		lines = []
 		for line in file:
 			lines.append(line)
@@ -143,7 +139,7 @@ if __name__ == "__main__":
 	DIR	 = "C:/Code/nc/"
 	FILE = "base.nc"
 
-	model = Init_NC(DIR, FILE)
+	model = ncModel(DIR+FILE)
 
 	index = 0
 	for path in model.paths:
