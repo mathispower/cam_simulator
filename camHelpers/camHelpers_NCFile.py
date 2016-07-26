@@ -1,5 +1,37 @@
-#!/usr/bin/env python
-import numpy as np
+#!C:/Python27/python -u
+import	numpy	  as	 np
+from	pyglet.gl import *
+
+def Init_NC(DIR, FILE):
+	ncModel = NCPath()
+	ncModel.LoadFile(DIR+FILE)
+	return ncModel
+
+def Model_NC(ncModel, posM, rotM):
+	""" This function loads the model for rendering.
+		posM = [ position_X, position_Y, position_Z ]
+		rotM = [ angle, axis_X_on/off, axis_Y_on/off, axisZ_on/off ]
+	"""
+
+	glPushMatrix()
+
+	glTranslatef( posM[0], posM[1], posM[2] )
+	glRotatef( rotM[0], rotM[1], rotM[2], rotM[3] )
+
+	glColor3f( 0.0, 0.0, 1.0 )
+
+	glBegin(GL_LINES)
+
+	# Screen-Z is into the monitor but model-z is vertical
+	for path in ncModel.paths:
+		x = path[0]
+		y = path[2]
+		z = path[1]
+		glVertex3f( x, y, z )
+
+	glEnd()
+
+	glPopMatrix()
 
 class NCPath:
 
@@ -106,4 +138,16 @@ class NCPath:
 
 		return self.GetPaths(lines)
 
+if __name__ == "__main__":
+	# Get the nc file into the script
+	DIR	 = "C:/Code/nc/"
+	FILE = "base.nc"
 
+	model = Init_NC(DIR, FILE)
+
+	index = 0
+	for path in model.paths:
+		if index < 10: print path
+		index += 1
+
+	print "\nThere were %d paths in the model." % index
