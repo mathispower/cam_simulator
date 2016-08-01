@@ -14,9 +14,26 @@ class ncModel:
 							"xWidth":0.0,
 							"yWidth":0.0,
 							"zWidth":0.0 }
+
+		self.modelSize = [ 0.0, 0.0, 0.0 ] # This is the size of the stock to machine
+
 		self.filename	= path.split("/")[-1].split(".")[0]
 		self.paths		= []		# Paths read from nc file
 		self.LoadFile(path)
+
+		for path in self.paths:
+			if path[0] < self.extents["xMin"]: self.extents["xMin"] = path[0]
+			elif path[0] > self.extents["xMax"]: self.extents["xMax"] = path[0]
+
+			if path[2] < self.extents["yMin"]: self.extents["yMin"] = path[2]
+			elif path[2] > self.extents["yMax"]: self.extents["yMax"] = path[2]
+
+			if path[1] < self.extents["zMin"]: self.extents["zMin"] = path[1]
+			elif path[1] > self.extents["zMax"]: self.extents["zMax"] = path[1]
+
+		self.extents["xWidth"] = np.absolute(self.extents["xMax"] - self.extents["xMin"])
+		self.extents["yWidth"] = np.absolute(self.extents["yMax"] - self.extents["yMin"])
+		self.extents["zWidth"] = np.absolute(self.extents["zMax"] - self.extents["zMin"])
 
 	def DrawModel(self, posM, rotM):
 		""" This function loads the model for rendering.
@@ -26,19 +43,26 @@ class ncModel:
 
 		glPushMatrix()
 
+		# glTranslatef( self.modelSize[0] - self.extents["xWidth"],
+					  # 0.0, 4.5)
+					  # self.modelSize[2] - self.extents["zWidth"] )
+					  # self.modelSize[2] - self.extents["yWidth"],
+					  # 
+		glTranslatef( self.modelSize[0]/2,
+					  0.0,
+					  self.modelSize[1]/2 )
+
+		glRotatef( rotM[0], 1, 0, 0 )
+		glRotatef( rotM[1], 0, 1, 0 )
+		glRotatef( rotM[2], 0, 0, 1 )
+
 		glTranslatef( posM[0], posM[1], posM[2] )
-		glRotatef( rotM[0], rotM[1], rotM[2], rotM[3] )
 
-		glColor3f( 0.0, 0.0, 1.0 )
+		glColor3f( 1.0, 0.0, 0.0 )
 
-		glBegin(GL_LINES)
+		glBegin(GL_LINE_STRIP)
 
-		# Screen-Z is into the monitor but model-z is vertical
-		for path in self.paths:
-			x = path[0]
-			y = path[2]
-			z = path[1]
-			glVertex3f( x, y, z )
+		for path in self.paths: glVertex3f( path[0], path[1], path[2] )
 
 		glEnd()
 
@@ -48,7 +72,14 @@ class ncModel:
 		ind = 0
 		for line in lines:
 			line = line[:-2]
-			if len( line.split(".") ) > 1:
+
+			if len( line.split("STOCK/BLOCK") ) > 1:
+				t0 = line.split(", ")
+				self.modelSize[0] = float(t0[1])
+				self.modelSize[1] = float(t0[2])
+				self.modelSize[2] = float(t0[3])
+
+			elif len( line.split(".") ) > 1:
 				x0 = line.split("X")
 				y0 = line.split("Y")
 				z0 = line.split("Z")

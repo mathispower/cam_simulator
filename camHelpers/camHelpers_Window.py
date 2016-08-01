@@ -1,4 +1,5 @@
 #!C:/Python27/python -u
+import numpy as np
 import	pyglet
 from	pyglet.gl		import *
 from	pyglet.window	import key,mouse
@@ -7,10 +8,24 @@ import	sys
 class window(pyglet.window.Window):
 
 	def __init__(self):
+		self.alive = True
+
+		self.models = []
+
 		# Setup the OpenGL window
 		self.winWidth  = 800
 		self.winHeight = 600
 		self.title	   = "CAM Simulator"
+
+		self.views = { "ISO":  [ 6, 6, 6, 0, 0, 0, 0, 1, 0 ],
+					   "Top":  [ 0, 6, 0, 0, 0, 0, 0, 0, -1],
+					   "Front":[ 0, 0, 6, 0, 0, 0, 0, 1, 0 ],
+					   "Right":[ 6, 0, 0, 0, 0, 0, 0, 1, 0 ],
+					 }
+
+		self.curView = "Top"
+
+		self.lookS = self.views[self.curView]
 
 		try:
 			# Try and create a window with multisampling (antialiasing)
@@ -19,36 +34,34 @@ class window(pyglet.window.Window):
 							 depth_size=16,
 							 double_buffer=True, )
 
-			self.window = pyglet.window.Window(	self.winWidth,
-											self.winHeight,
-											self.title,
-											resizable=True,
-											config=config )
+			super(window, self).__init__( self.winWidth,
+										  self.winHeight,
+										  self.title,
+										  resizable=True,
+										  config=config )
 
 		except pyglet.window.NoSuchConfigException:
 			print "Unable to use antialiasing."; sys.stdout.flush()
 			# Fall back to no multisampling for old hardware
-			self.window = pyglet.window.Window(	self.winWidth,
-											self.winHeight,
-											self.title,
-											resizable=True )
+			super(window, self).__init__( self.winWidth,
+										  self.winHeight,
+										  self.title,
+										  resizable=True )
+
+		super(window, self).set_location(0,30)
+
+		self.init()
+
+	def on_close(self):
+		self.alive = False
 
 	def on_draw(self):
-		glClearColor(0.5, 0.75, 0.5, 1)
-
-		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-
-		# glOrtho(0, winWidth, 0, winHeight, -1, 1)
-		glMatrixMode(GL_MODELVIEW)
-		glLoadIdentity()
-
-		fps_display.draw()
-
-		Model_GroundPlane()
-
-		ncModel.DrawModel( [mPosX,mPosY,mPosZ], [angle,mRotX,mRotY,mRotZ] )
+		self.render()
 
 	def init(self):
+
+		self.fps_display = pyglet.window.FPSDisplay(self)
+
 		# One-time GL setup
 		# glClearColor(0, 0, 0, 1)
 		# glColor3f(1, 0, 0)
@@ -56,7 +69,7 @@ class window(pyglet.window.Window):
 		glEnable(GL_CULL_FACE)
 
 		# Uncomment this line for a wireframe view
-		# glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
 		# Simple light setup.  On Windows GL_LIGHT0 is enabled by default,
 		# but this is not the case on Linux or Mac, so remember to always 
@@ -69,10 +82,10 @@ class window(pyglet.window.Window):
 		def vec(*args):
 		    return (GLfloat * len(args))(*args)
 
-		glLightfv(GL_LIGHT0, GL_POSITION, vec(.5, .5, 1, 0))
+		glLightfv(GL_LIGHT0, GL_POSITION, vec(10, 10, 1, 0))
 		glLightfv(GL_LIGHT0, GL_SPECULAR, vec(.5, .5, 1, 1))
 		glLightfv(GL_LIGHT0, GL_DIFFUSE, vec(1, 1, 1, 1))
-		glLightfv(GL_LIGHT1, GL_POSITION, vec(1, 0, .5, 0))
+		glLightfv(GL_LIGHT1, GL_POSITION, vec(10, 0, 15, 0))
 		glLightfv(GL_LIGHT1, GL_DIFFUSE, vec(.5, .5, .5, 1))
 		glLightfv(GL_LIGHT1, GL_SPECULAR, vec(1, 1, 1, 1))
 
@@ -85,67 +98,136 @@ class window(pyglet.window.Window):
 
 		glMatrixMode(GL_PROJECTION)
 		glLoadIdentity()
-		gluPerspective(70., self.winWidth / float(self.winHeight), .1, 1000.)
+		glOrtho( -10, self.winWidth+10, -10, self.winHeight+10, 0.1, 10000 )
+		# gluPerspective(70., self.winWidth / float(self.winHeight), .1, 1000.)
 
-	@self.window.event
 	def on_key_press(self, symbol, modifiers):
-		global mPosX, mPosY, mPosZ, mRotX, mRotY, mRotZ, angle
-		global label_1
+		increment = 1
 		if   symbol == key.DOWN:
-			mPosY = mPosY - 1
-
-		elif symbol == key.LEFT:
-			mPosX = mPosX - 1
-
-		elif symbol == key.RIGHT:
-			mPosX = mPosX + 1
+			self.lookS[1] -= increment
+			self.lookS[4] -= increment
 
 		elif symbol == key.UP:
-			mPosY = mPosY + 1
+			self.lookS[1] += increment
+			self.lookS[4] += increment
+
+		elif symbol == key.LEFT:
+			self.lookS[0] -= increment
+			self.lookS[3] -= increment
+
+		elif symbol == key.RIGHT:
+			self.lookS[0] += increment
+			self.lookS[3] += increment
 
 		elif symbol == key.PAGEUP:
-			mPosZ = mPosZ + 1
+			self.lookS[2] -= increment
+			self.lookS[5] -= increment
 
 		elif symbol == key.PAGEDOWN:
-			mPosZ = mPosZ - 1
+			self.lookS[2] += increment
+			self.lookS[5] += increment
+
+		elif symbol == key._0:
+			self.curView = "ISO"
+			self.lookS = self.views[self.curView]
 
 		elif symbol == key._1:
-			angle -= 10.0
+			self.curView = "Front"
+			self.lookS = self.views[self.curView]
 
 		elif symbol == key._2:
-			angle += 10.0
+			self.curView = "Top"
+			self.lookS = self.views[self.curView]
 
-		elif symbol == key.A:
-			mRotX = 0.0
+		elif symbol == key._3:
+			self.curView = "Right"
+			self.lookS = self.views[self.curView]
 
-		elif symbol == key.Q:
-			mRotX = 1.0
+		# elif symbol == key.A:
+		# 	mRotX = 0.0
 
-		elif symbol == key.W:
-			mRotY = 1.0
+		# elif symbol == key.Q:
+		# 	mRotX = 1.0
 
-		elif symbol == key.S:
-			mRotY = 0.0
+		# elif symbol == key.W:
+		# 	mRotY = 1.0
 
-		elif symbol == key.D:
-			mRotZ = 0.0
+		# elif symbol == key.S:
+		# 	mRotY = 0.0
 
-		elif symbol == key.E:
-			mRotZ = 1.0
+		# elif symbol == key.D:
+		# 	mRotZ = 0.0
+
+		# elif symbol == key.E:
+		# 	mRotZ = 1.0
 
 		elif symbol == key.X:
 			sys.exit(0)
 
-		label_1  = "[ %.0f, %.0f, %.0f ]\t" % (mPosX, mPosY, mPosZ)
-		label_1 += "[ %.2f, %.0f, %.0f, %.0f ]" % (angle, mRotX, mRotY, mRotZ)
-		print label_1; sys.stdout.flush()
+	def on_mouse_drag(self, x, y, dx, dy, button, modifiers):
+		if button == mouse.LEFT:
+			pass
+		elif button == mouse.RIGHT:
+			t0 = dy/float(self.winHeight)*10
+
+			# Normalize view vector
+			t1 = self.lookS[0] - self.lookS[3]
+			t2 = self.lookS[1] - self.lookS[4]
+			t3 = self.lookS[2] - self.lookS[5]
+
+			mag = np.sqrt( np.power(t1, 2) + np.power(t2, 2) + np.power(t3, 2) )
+
+			norm = [t1/mag, t2/mag, t3/mag]
+
+			# Move view camera along view vector
+			for i in range(3): self.lookS[i] -= norm[i] * t0
+
+	def on_mouse_motion(self, x, y, dx, dy):
+		pass
 
 	def on_mouse_press(self, x, y, button, modifiers):
-		global mPosX, mPosY, mPosZ, mRotX, mRotY, mRotZ
-		if   button == mouse.LEFT:
+		if button == mouse.LEFT:
+			# Get the view vector
+			vv = [ self.lookS[0] - self.lookS[3],
+				   self.lookS[1] - self.lookS[4],
+				   self.lookS[2] - self.lookS[5] ]
+
+			# Offset vector (Shift on plane normal to view vector)
+			
+
+			# Calculate new position in world space
+
+
+		elif button == mouse.RIGHT:
+			pass
+
+	def on_mouse_release(self, x, y, button, modifiers):
+		if button == mouse.LEFT:
 			pass
 		elif button == mouse.RIGHT:
 			pass
+
+	def render(self):
+		glClearColor(0.5, 0.5, 0.5, 1)
+
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+
+		self.fps_display.draw()
+
+		# glOrtho(0, winWidth, 0, winHeight, -1, 1)
+		glMatrixMode(GL_MODELVIEW)
+		glLoadIdentity()
+
+
+
+		gluLookAt( *self.lookS )
+
+		
+
+		# Draw all of the models attached to this instance
+		for model in self.models: model[0](model[1],model[2])
+
+		self.flip()
 
 	def on_resize(self, width, height):
 		""" Override the default on_resize handler to create a 3D projection. """
@@ -155,6 +237,11 @@ class window(pyglet.window.Window):
 		gluPerspective(70., width / float(height), .1, 1000.)
 		glMatrixMode(GL_MODELVIEW)
 		return pyglet.event.EVENT_HANDLED
+
+	def run(self):
+		while self.alive:
+			event = self.dispatch_events()
+			self.render()
 
 if __name__ == "__main__":
 	from camHelpers_NCFile import ncModel
@@ -170,7 +257,4 @@ if __name__ == "__main__":
 
 	win = window()
 
-	win.init()
-
-	pyglet.app.run()
-
+	win.run()
